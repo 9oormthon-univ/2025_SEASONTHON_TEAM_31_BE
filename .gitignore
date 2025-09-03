@@ -1,0 +1,15 @@
+# Build files
+build/
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Log files
+*.log
+
+# Local configuration
+src/main/resources/application.properties
