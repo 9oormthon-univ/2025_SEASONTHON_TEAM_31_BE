@@ -1,4 +1,4 @@
-package com.cloudtone31.dto;
+package com.cloudtone31.chat.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

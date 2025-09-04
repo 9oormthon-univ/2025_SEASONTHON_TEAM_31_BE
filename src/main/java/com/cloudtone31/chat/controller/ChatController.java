@@ -1,8 +1,8 @@
-package com.cloudtone31.controller;
+package com.cloudtone31.chat.controller;
 
-import com.cloudtone31.dto.ChatRequestDTO;
-import com.cloudtone31.dto.ChatResponseDTO;
-import com.cloudtone31.service.GptService;
+import com.cloudtone31.chat.dto.ChatRequestDTO;
+import com.cloudtone31.chat.dto.ChatResponseDTO;
+import com.cloudtone31.chat.service.GptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
