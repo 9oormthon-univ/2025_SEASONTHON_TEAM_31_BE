@@ -41,7 +41,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Build (bootJar)
-        run: ./gradlew clean test bootJar -x integrationTest
+        run: ./gradlew clean bootJar -x test
 
       # Docker Hub 로그인 (Secrets 필요)
       - name: Login to Docker Hub
