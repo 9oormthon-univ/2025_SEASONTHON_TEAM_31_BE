@@ -1,6 +1,6 @@
 .git
 .gradle
-build
+
 out
 node_modules
 *.log
