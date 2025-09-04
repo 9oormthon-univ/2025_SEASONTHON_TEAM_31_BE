@@ -1,4 +1,4 @@
-package com.cloudtone31.domain;
+package com.cloudtone31.mission.domain;
 
 import io.hypersistence.utils.hibernate.type.json.JsonType; // 추가
 import jakarta.persistence.*;

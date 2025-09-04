@@ -1,6 +1,6 @@
-package com.cloudtone31.repository;
+package com.cloudtone31.mission.repository;
 
-import com.cloudtone31.domain.Missions;
+import com.cloudtone31.mission.domain.Missions;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

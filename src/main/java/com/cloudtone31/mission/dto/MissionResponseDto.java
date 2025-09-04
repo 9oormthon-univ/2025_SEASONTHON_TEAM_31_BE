@@ -1,6 +1,6 @@
-package com.cloudtone31.dto;
+package com.cloudtone31.mission.dto;
 
-import com.cloudtone31.domain.Missions;
+import com.cloudtone31.mission.domain.Missions;
 import lombok.Getter;
 import java.util.List;
 

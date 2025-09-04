@@ -1,16 +1,15 @@
-package com.cloudtone31.service;
+package com.cloudtone31.mission.service;
 
-import com.cloudtone31.domain.Answers;
-import com.cloudtone31.domain.Missions;
-import com.cloudtone31.domain.Users;
-import com.cloudtone31.repository.AnswerRepository;
-import com.cloudtone31.repository.MissionRepository;
-import com.cloudtone31.repository.UserRepository; // UserRepository도 필요합니다.
+import com.cloudtone31.mission.domain.Answers;
+import com.cloudtone31.mission.domain.Missions;
+import com.cloudtone31.mission.domain.Users;
+import com.cloudtone31.mission.repository.AnswerRepository;
+import com.cloudtone31.mission.repository.MissionRepository;
+import com.cloudtone31.mission.repository.UserRepository; // UserRepository도 필요합니다.
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 

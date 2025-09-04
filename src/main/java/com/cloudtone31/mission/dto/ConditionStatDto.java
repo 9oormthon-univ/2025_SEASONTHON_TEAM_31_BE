@@ -1,6 +1,6 @@
-package com.cloudtone31.dto;
+package com.cloudtone31.mission.dto;
 
-import com.cloudtone31.domain.DailyCondition;
+import com.cloudtone31.mission.domain.DailyCondition;
 import lombok.Getter;
 
 import java.time.LocalDate;

@@ -1,6 +1,6 @@
-package com.cloudtone31.dto;
+package com.cloudtone31.mission.dto;
 
-import com.cloudtone31.domain.Answers;
+import com.cloudtone31.mission.domain.Answers;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 

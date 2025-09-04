@@ -1,4 +1,4 @@
-package com.cloudtone31.domain;
+package com.cloudtone31.mission.domain;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

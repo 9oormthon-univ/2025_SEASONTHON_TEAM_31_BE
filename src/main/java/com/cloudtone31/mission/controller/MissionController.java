@@ -1,11 +1,11 @@
-package com.cloudtone31.controller;
+package com.cloudtone31.mission.controller;
 
-import com.cloudtone31.domain.Answers;
-import com.cloudtone31.domain.Missions;
-import com.cloudtone31.dto.AnswerResponseDto;
-import com.cloudtone31.dto.MissionRequestDto;
-import com.cloudtone31.dto.MissionResponseDto;
-import com.cloudtone31.service.MissionService;
+import com.cloudtone31.mission.domain.Answers;
+import com.cloudtone31.mission.domain.Missions;
+import com.cloudtone31.mission.dto.AnswerResponseDto;
+import com.cloudtone31.mission.dto.MissionRequestDto;
+import com.cloudtone31.mission.dto.MissionResponseDto;
+import com.cloudtone31.mission.service.MissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
