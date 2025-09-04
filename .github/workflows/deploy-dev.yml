@@ -1,3 +1,17 @@
+name: Deploy to EC2 (dev) via Docker Hub
+
+on:
+  push:
+    branches: [ "dev" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
