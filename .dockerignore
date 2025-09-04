@@ -1,11 +1,25 @@
+# Git
 .git
-.gradle
+.gitignore
 
-out
-node_modules
+# Gradle
+.gradle
+build/            # 대신 멀티스테이지에서 build/libs/*.jar만 COPY
+
+# IDE / OS
+*.iml
+.idea
+.vscode
+.DS_Store
+
+# Logs & keys
 *.log
 *.pem
 *.key
-Dockerfile
+
+# Node (프론트엔드 같이 들어있다면)
+node_modules
+
+# Compose / CI configs
 docker-compose*.yml
 .github
