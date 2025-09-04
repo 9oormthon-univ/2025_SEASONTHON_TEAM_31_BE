@@ -2,7 +2,7 @@ name: Deploy to EC2 (dev) via Docker Hub
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: ["dev"]
   workflow_dispatch: {}
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      # 1) 디스크 공간 확보
+      # (옵션) 디스크 여유 확보
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -36,9 +36,8 @@ jobs:
           haskell: true
           large-packages: true
           swap-storage: true
-          docker-images: true  # 빌드 전에 지워도 OK (어차피 새로 받음)
+          docker-images: true
 
-      # (선택) 현재 여유 확인
       - name: Show disk usage (before build)
         run: |
           df -h
@@ -50,19 +49,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # (선택) 여유가 빠듯하면 Gradle 캐시 잠깐 끄세요. 사용 시에는 그대로 두세요.
-      # - name: Cache Gradle
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ~/.gradle/caches
-      #       ~/.gradle/wrapper
-      #     key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-      #     restore-keys: ${{ runner.os }}-gradle-
-
-      # 멀티스테이지 Dockerfile이면 이 스텝(bootJar)은 생략 가능
+      # Gradle 빌드 산출물(JAR) 생성
       - name: Build (bootJar)
         run: ./gradlew clean bootJar -x test
+
+      # Buildx를 docker-container 드라이버로 (GHA 캐시 사용 가능)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver: docker-container
+          driver-opts: image=moby/buildkit:latest
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -71,7 +68,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 2) Docker 레이어 캐시를 GHA로 사용
       - name: Build and push image to Docker Hub
         uses: docker/build-push-action@v6
         with:
