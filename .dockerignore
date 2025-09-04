@@ -1,6 +1,11 @@
 .git
 .gradle
-build/tmp
-build/classes
-build/generated
-.DS_Store
+build
+out
+node_modules
+*.log
+*.pem
+*.key
+Dockerfile
+docker-compose*.yml
+.github
