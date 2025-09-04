@@ -1,5 +1,6 @@
 package com.cloudtone31.mission.domain;
 
+import com.cloudtone31.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -19,14 +20,14 @@ public class DailyCondition {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private Users user;
+    private User user;
 
     @Column(name = "`condition`", nullable = false) // 'condition'은 SQL 예약어일 수 있으므로 ``로 감싸줍니다.
     private String condition;
 
     private LocalDateTime selectedAt;
 
-    public DailyCondition(Users user, String condition) {
+    public DailyCondition(User user, String condition) {
         this.user = user;
         this.condition = condition;
         this.selectedAt = LocalDateTime.now();

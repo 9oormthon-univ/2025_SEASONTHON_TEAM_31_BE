@@ -1,5 +1,6 @@
 package com.cloudtone31.mission.domain;
 
+import com.cloudtone31.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,7 @@ public class Answers {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private Users user;
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mission_id")
@@ -31,7 +32,7 @@ public class Answers {
 
     private LocalDateTime answeredAt;
 
-    public static Answers createAnswer(Users user, Missions mission, String content) {
+    public static Answers createAnswer(User user, Missions mission, String content) {
         return new Answers(null, user, mission, content, LocalDateTime.now());
     }
 }

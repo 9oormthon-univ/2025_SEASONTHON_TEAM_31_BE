@@ -1,11 +1,11 @@
 package com.cloudtone31.mission.service;
 
 import com.cloudtone31.mission.domain.DailyCondition;
-import com.cloudtone31.mission.domain.Users;
 import com.cloudtone31.mission.dto.ConditionStatDto;
 import com.cloudtone31.mission.dto.ConditionStatsResponseDto;
 import com.cloudtone31.mission.repository.DailyConditionRepository;
-import com.cloudtone31.mission.repository.UserRepository;
+import com.cloudtone31.user.domain.User;
+import com.cloudtone31.user.repository.UserLoginRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +23,11 @@ import java.util.stream.Collectors;
 public class ConditionService {
 
     private final DailyConditionRepository dailyConditionRepository;
-    private final UserRepository userRepository;
+    private final UserLoginRepository userRepository;
 
     @Transactional
     public DailyCondition createDailyCondition(Long userId, String condition) {
-        Users user = userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 유저를 찾을 수 없습니다. id=" + userId));
 
         DailyCondition newDailyCondition = new DailyCondition(user, condition);

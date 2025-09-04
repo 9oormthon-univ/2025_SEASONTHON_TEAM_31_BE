@@ -32,13 +32,12 @@ public class AuthController {
     public ResponseEntity<?> me(@AuthenticationPrincipal OAuth2User principal) {
         if (principal == null) return ResponseEntity.status(401).build();
 
-        // 1) kakaoId, id, sub 순서로 시도
-        Long kakaoId = getLongAttr(principal, "kakaoId", "id", "sub");
-        if (kakaoId == null) {
-            // 어떤 키/값이 들어왔는지 한 번에 보자 (디버깅용)
+        // kakaoId를 String으로 획득 (id/sub가 숫자여도 문자열로 변환)
+        String kakaoId = getAttrAsString(principal, "kakaoId", "kakao_id", "id", "sub");
+        if (kakaoId == null || kakaoId.isBlank()) {
             return ResponseEntity.status(500).body(Map.of(
                     "message", "Cannot resolve Kakao id from OAuth2 attributes",
-                    "expectedKeys", List.of("kakaoId", "id", "sub"),
+                    "expectedKeys", List.of("kakaoId", "kakao_id", "id", "sub"),
                     "actualAttributes", principal.getAttributes()
             ));
         }
@@ -54,6 +53,19 @@ public class AuthController {
                 user.getProfileImage(),
                 user.getLastLoginAt()
         ));
+    }
+
+    /** principal의 attributes에서 주어진 키들을 순서대로 찾아 문자열로 반환 */
+    private String getAttrAsString(OAuth2User principal, String... keys) {
+        Map<String, Object> attrs = principal.getAttributes();
+        for (String key : keys) {
+            Object v = attrs.get(key);
+            if (v == null) continue;
+            if (v instanceof String s) return s;
+            if (v instanceof Number n) return String.valueOf(n.longValue());
+            return String.valueOf(v); // 그 외 타입도 문자열화
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")

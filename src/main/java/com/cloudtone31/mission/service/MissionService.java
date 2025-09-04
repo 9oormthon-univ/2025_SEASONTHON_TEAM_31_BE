@@ -2,10 +2,11 @@ package com.cloudtone31.mission.service;
 
 import com.cloudtone31.mission.domain.Answers;
 import com.cloudtone31.mission.domain.Missions;
-import com.cloudtone31.mission.domain.Users;
+
 import com.cloudtone31.mission.repository.AnswerRepository;
 import com.cloudtone31.mission.repository.MissionRepository;
-import com.cloudtone31.mission.repository.UserRepository; // UserRepository도 필요합니다.
+import com.cloudtone31.user.domain.User;
+import com.cloudtone31.user.repository.UserLoginRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,7 @@ public class MissionService {
     // 이전에 만든 Repository들을 주입받습니다.
     private final MissionRepository missionRepository;
     private final AnswerRepository answerRepository;
-    private final UserRepository userRepository; // 답변을 저장할 때 유저 정보가 필요하므로 추가합니다.
+    private final UserLoginRepository userRepository; // 답변을 저장할 때 유저 정보가 필요하므로 추가합니다.
     // private final UserPlantRepository userPlantRepository; // 나중에 식물 성장 로직을 위해 추가할 예정
 
     /**
@@ -64,7 +65,7 @@ public class MissionService {
      */
     @Transactional
     public Answers submitAnswer(Long userId, Long missionId, String content) { // 반환 타입을 Answers로 변경
-        Users user = userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 유저를 찾을 수 없습니다. id=" + userId));
         Missions mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 미션을 찾을 수 없습니다. id=" + missionId));
