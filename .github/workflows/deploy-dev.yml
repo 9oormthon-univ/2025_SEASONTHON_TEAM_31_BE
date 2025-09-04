@@ -96,3 +96,7 @@ jobs:
             export DOCKERHUB_TOKEN="${{ secrets.DOCKERHUB_TOKEN }}"
             cd /home/ubuntu/growme
             ./deploy-dev.sh "${{ env.GIT_SHA }}"
+      - name: Clean up Docker images (runner)
+        run: |
+          docker system prune -af
+          df -h
