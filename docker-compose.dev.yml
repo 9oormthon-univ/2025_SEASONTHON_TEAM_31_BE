@@ -1,4 +1,4 @@
-# version: "3.8"  # 경고가 떠서 지워도 됩니다
+# version 키는 제거 OK
 
 services:
   mysql:
@@ -7,19 +7,23 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Seoul
     ports:
-      - "3306:3306"
+      - "3306:3306"           # 외부 공개가 불필요하면 "127.0.0.1:3306:3306" 권장
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     volumes:
       - mysql_data:/var/lib/mysql
+    restart: unless-stopped
 
   redis:
     image: redis:7.2
     container_name: growme-redis
     ports:
-      - "6379:6379"
+      - "6379:6379"           # 불필요하면 "127.0.0.1:6379:6379" 권장
+    restart: unless-stopped
 
   app:
-    image: ghcr.io/9oormthon-univ/2025_seasonthon_team_31_be:dev-${GIT_SHA}
+    image: docker.io/juheunshim/growme-be:dev-${GIT_SHA}   # ← Docker Hub 경로(소문자)
     container_name: growme-app
     env_file: .env
     ports:
@@ -27,6 +31,7 @@ services:
     depends_on:
       - mysql
       - redis
+    restart: unless-stopped
 
 volumes:
   mysql_data:
