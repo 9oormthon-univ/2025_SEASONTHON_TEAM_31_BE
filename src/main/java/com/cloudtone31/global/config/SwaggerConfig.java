@@ -1,4 +1,4 @@
-package com.cloudtone31.global.config;
+package com.example.growme.config;
 
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.Components;
