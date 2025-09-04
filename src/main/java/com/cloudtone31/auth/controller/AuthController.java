@@ -1,7 +1,7 @@
 package com.cloudtone31.auth.controller;
 
 
-import com.cloudtone31.user.repository.UserRepository;
+import com.cloudtone31.user.repository.UserLoginRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final UserRepository userRepository;
+    private final UserLoginRepository userLoginRepository;
 
     @GetMapping("/me")
     public ResponseEntity<?> me(@AuthenticationPrincipal OAuth2User principal) {
@@ -43,7 +43,7 @@ public class AuthController {
             ));
         }
 
-        var user = userRepository.findByKakaoId(kakaoId).orElse(null);
+        var user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         if (user == null) return ResponseEntity.status(404).body("user not found");
 
         record MeDto(Long id, String nickname, String email, String profileImage, LocalDateTime lastLoginAt) {}

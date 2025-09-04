@@ -6,7 +6,7 @@ import com.cloudtone31.user.dto.NicknameReq;
 import com.cloudtone31.user.dto.NicknameRes;
 import com.cloudtone31.user.dto.UserMeDto;
 
-import com.cloudtone31.user.repository.UserRepository;
+import com.cloudtone31.user.repository.UserLoginRepository;
 import com.cloudtone31.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,7 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserLoginRepository userLoginRepository;
     private final UserService userService;
 
     /** 현재 로그인한 사용자 정보 조회 : GET /users/me */
@@ -47,7 +47,7 @@ public class UserController {
                     .body(ApiResponse.fail("OAuth2 attributes에서 카카오 ID를 찾을 수 없습니다."));
         }
 
-        User user = userRepository.findByKakaoId(kakaoId).orElse(null);
+        User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         if (user == null) {
             return ResponseEntity.status(404).body(ApiResponse.fail("사용자를 찾을 수 없습니다."));
         }
@@ -70,12 +70,12 @@ public class UserController {
             return ResponseEntity.status(400).body(ApiResponse.fail("프로필 정보가 올바르지 않습니다."));
         }
 
-        User user = userRepository.findByKakaoId(kakaoId).orElse(null);
+        User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         if (user == null) {
             return ResponseEntity.status(404).body(ApiResponse.fail("사용자를 찾을 수 없습니다."));
         }
 
-        userRepository.delete(user);
+        userLoginRepository.delete(user);
 
         new SecurityContextLogoutHandler().logout(request, response, authentication);
         ResponseCookie expired = ResponseCookie.from("JSESSIONID", "")

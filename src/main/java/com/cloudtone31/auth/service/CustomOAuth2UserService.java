@@ -3,7 +3,7 @@ package com.cloudtone31.auth.service;
 import com.cloudtone31.auth.KakaoAttributes;
 import com.cloudtone31.user.domain.User;
 
-import com.cloudtone31.user.repository.UserRepository;
+import com.cloudtone31.user.repository.UserLoginRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -21,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final UserRepository userRepository;
+    private final UserLoginRepository userLoginRepository;
 
     @Override
     @Transactional
@@ -35,7 +35,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String profile = KakaoAttributes.getProfileImage(attrs);
 
         // Upsert
-        User user = userRepository.findByKakaoId(kakaoId)
+        User user = userLoginRepository.findByKakaoId(kakaoId)
                 .map(u -> {
                     // 필요한 필드만 업데이트
                     u = User.builder()
@@ -48,9 +48,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                             .updatedAt(u.getUpdatedAt())
                             .lastLoginAt(LocalDateTime.now())
                             .build();
-                    return userRepository.save(u);
+                    return userLoginRepository.save(u);
                 })
-                .orElseGet(() -> userRepository.save(
+                .orElseGet(() -> userLoginRepository.save(
                         User.builder()
                                 .kakaoId(kakaoId)
                                 .email(email)
