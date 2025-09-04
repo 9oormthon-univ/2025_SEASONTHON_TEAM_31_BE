@@ -19,7 +19,7 @@ services:
       - "6379:6379"
 
   app:
-    image: ghcr.io/9oormthon-univ/2025_SEASONTHON_TEAM_31_BE:dev-${GIT_SHA}
+    image: ghcr.io/9oormthon-univ/2025_seasonthon_team_31_be:dev-${GIT_SHA}
     container_name: growme-app
     env_file: .env
     ports:
