@@ -1,4 +1,5 @@
-version: "3.8"
+# version: "3.8"  # 경고가 떠서 지워도 됩니다
+
 services:
   mysql:
     image: mysql:8.0
@@ -18,7 +19,7 @@ services:
       - "6379:6379"
 
   app:
-    build: .
+    image: ghcr.io/9oormthon-univ/2025_SEASONTHON_TEAM_31_BE:dev-${GIT_SHA}
     container_name: growme-app
     env_file: .env
     ports:
