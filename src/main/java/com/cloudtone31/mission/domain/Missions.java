@@ -22,7 +22,7 @@ public class Missions {
     private Long id;
 
     // 예약어 충돌 회피
-    @Column(name = "mission_condition", nullable = false, length = 255)
+    @Column(name = "condition", nullable = false, length = 255)
     private String condition;
 
     @Column(nullable = false, columnDefinition = "TEXT")
@@ -33,7 +33,7 @@ public class Missions {
 
     // MySQL 8.x: json 타입 권장 (H2 테스트 시엔 TEXT로 교체)
     @Type(JsonType.class)
-    @Column(name = "options_json", columnDefinition = "json")
+    @Column(name = "options", columnDefinition = "json")
     private List<String> options;
 
     @CreationTimestamp

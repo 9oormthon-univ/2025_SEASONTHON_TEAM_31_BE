@@ -6,6 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,10 +29,10 @@ public class UserPlants {
     @Column(name = "plant_name", nullable = false)
     private String plantName;
 
-    @Column(name = "growth_percent", nullable = false)
-    private int growthPercent;
+    @Column(name = "growth_percentage", nullable = false)
+    private int growthPercentage;
 
-    @Column(name = "plant_image")
+    @Column(name = "current_image")
     private String plantImage;
 
     @Column(name = "growth_stage")
@@ -45,4 +46,17 @@ public class UserPlants {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    public void updatePlantName(String newName) {
+        this.plantName = newName;
+    }
+
+    public void complete() {
+        this.isActive = false;
+        this.growthStage = "만개";
+    }
+
+    public void updateGrowthStage(String newStage) {
+        this.growthStage = newStage;
+    }
 }

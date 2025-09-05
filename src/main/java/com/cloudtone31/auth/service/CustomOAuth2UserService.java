@@ -3,6 +3,10 @@ package com.cloudtone31.auth.service;
 import com.cloudtone31.auth.KakaoAttributes;
 import com.cloudtone31.user.domain.User;
 import com.cloudtone31.user.repository.UserLoginRepository;
+import com.cloudtone31.userplants.domain.PlantType;
+import com.cloudtone31.userplants.domain.UserPlants;
+import com.cloudtone31.userplants.repository.PlantTypeRepository;
+import com.cloudtone31.userplants.repository.UserPlantsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -21,6 +25,8 @@ import java.util.Map;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserLoginRepository userLoginRepository;
+    private final UserPlantsRepository userPlantsRepository; // 추가
+    private final PlantTypeRepository plantTypeRepository; // 추가
 
     @Override
     @Transactional
@@ -49,16 +55,29 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     // User 엔티티에 updateEmail/updateProfileImage 같은 메서드를 추가해서 호출하세요.
                     return userLoginRepository.save(u);
                 })
-                .orElseGet(() -> userLoginRepository.save(
-                        User.builder()
-                                .kakaoId(kakaoId)      // String!
-                                .email(email)
-                                .nickname(nickname)
-                                .name(name)            // 🔴 NOT NULL 필수
-                                .profileImage(profile)
-                                .lastLoginAt(LocalDateTime.now())
-                                .build()
-                ));
+                .orElseGet(() -> { // 이 부분 수정됨
+                    User newUser = User.builder()
+                            .kakaoId(kakaoId)      // String!
+                            .email(email)
+                            .nickname(nickname)
+                            .name(name)            // 🔴 NOT NULL 필수
+                            .profileImage(profile)
+                            .lastLoginAt(LocalDateTime.now())
+                            .build();
+                    userLoginRepository.save(newUser);
+                    PlantType firstPlantType = plantTypeRepository.findAllByOrderByUnlockOrderAsc().get(0);
+                    UserPlants firstPlant = UserPlants.builder()
+                            .user(newUser)
+                            .plantType(firstPlantType.getTypeCode())
+                            .plantName("나의 " + firstPlantType.getName())
+                            .growthPercentage(0)
+                            .plantImage(String.format("/images/%s_stage0.png", firstPlantType.getTypeCode()))
+                            .growthStage("씨앗")
+                            .isActive(true)
+                            .build();
+                    userPlantsRepository.save(firstPlant);
+                    return newUser;
+                });
 
         // Security 컨텍스트에 전달
         return new DefaultOAuth2User(

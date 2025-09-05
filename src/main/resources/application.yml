@@ -3,6 +3,7 @@ spring:
     name: growme
   jackson:
     time-zone: Asia/Seoul
+    property-naming-strategy: SNAKE_CASE
   profiles:
     active: local  # 기본 프로필
 

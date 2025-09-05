@@ -7,6 +7,7 @@ import com.cloudtone31.mission.repository.AnswerRepository;
 import com.cloudtone31.mission.repository.MissionRepository;
 import com.cloudtone31.user.domain.User;
 import com.cloudtone31.user.repository.UserLoginRepository;
+import com.cloudtone31.userplants.service.PlantsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +22,8 @@ public class MissionService {
     // 이전에 만든 Repository들을 주입받습니다.
     private final MissionRepository missionRepository;
     private final AnswerRepository answerRepository;
-    private final UserLoginRepository userRepository; // 답변을 저장할 때 유저 정보가 필요하므로 추가합니다.
-    // private final UserPlantRepository userPlantRepository; // 나중에 식물 성장 로직을 위해 추가할 예정
+    private final UserLoginRepository userRepository;
+    private final PlantsService plantsService;
 
     /**
      * 오늘의 미션을 조회하는 핵심 로직입니다.
@@ -64,15 +65,16 @@ public class MissionService {
      * @param content 답변 내용
      */
     @Transactional
-    public Answers submitAnswer(Long userId, Long missionId, String content) { // 반환 타입을 Answers로 변경
+    public Answers submitAnswer(Long userId, Long missionId, String content) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 유저를 찾을 수 없습니다. id=" + userId));
         Missions mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 미션을 찾을 수 없습니다. id=" + missionId));
 
+        plantsService.growPlant(userId);
+
         Answers newAnswer = Answers.createAnswer(user, mission, content);
 
-        // save 메소드는 저장된 객체를 반환하므로, 이를 그대로 return해줍니다.
         return answerRepository.save(newAnswer);
     }
 }
