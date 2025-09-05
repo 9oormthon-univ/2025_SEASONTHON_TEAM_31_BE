@@ -11,8 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.cloudtone31")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -46,22 +45,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.fail(e.getMessage()));
     }
 
+    // ✅ 단 하나의 범용 핸들러만 유지
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleEtc(Exception e) {
-        // 필요하면 로그 추가
+    public ResponseEntity<ApiResponse<?>> handleEtc(Exception e, HttpServletRequest req) throws Exception {
+        String uri = req.getRequestURI();
+        // springdoc/swagger 요청은 스프링 기본 처리에 맡겨야 /v3/api-docs 가 500이 안 남
+        if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
+            throw e; // <-- 반드시 throws Exception 선언 필요
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail("서버에서 오류가 발생했습니다."));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handle(Exception e, HttpServletRequest req) throws Exception {
-        String uri = req.getRequestURI();
-        if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
-            // 문서 요청은 전역 예외 처리에서 건드리지 않고 기본 처리로 넘김
-            throw e;
-        }
-        return ResponseEntity.status(500).body(Map.of(
-                "success", false, "message", "서버에서 오류가 발생했습니다.")
-        );
     }
 }
