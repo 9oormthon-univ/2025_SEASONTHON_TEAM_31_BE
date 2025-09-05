@@ -1,5 +1,6 @@
 package com.cloudtone31.global.api;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestControllerAdvice
@@ -49,5 +51,17 @@ public class GlobalExceptionHandler {
         // 필요하면 로그 추가
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail("서버에서 오류가 발생했습니다."));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handle(Exception e, HttpServletRequest req) throws Exception {
+        String uri = req.getRequestURI();
+        if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
+            // 문서 요청은 전역 예외 처리에서 건드리지 않고 기본 처리로 넘김
+            throw e;
+        }
+        return ResponseEntity.status(500).body(Map.of(
+                "success", false, "message", "서버에서 오류가 발생했습니다.")
+        );
     }
 }
