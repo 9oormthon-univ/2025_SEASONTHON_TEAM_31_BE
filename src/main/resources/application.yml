@@ -4,10 +4,18 @@ spring:
   jackson:
     time-zone: Asia/Seoul
   profiles:
-    active: local
+    active: local  # 기본 프로필
 
 server:
   port: 8080
+  forward-headers-strategy: native
+  servlet:
+    session:
+      tracking-modes: COOKIE
+      cookie:
+        name: JSESSIONID
+        http-only: true
+        same-site: Lax
 
 management:
   endpoints:
@@ -19,20 +27,18 @@ management:
       probes:
         enabled: true
 
+# -----------------------------------------------------------------------------
+# local
+# -----------------------------------------------------------------------------
 ---
 spring:
-  config.activate.on-profile: local
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-  flyway:
-    enabled: false
+  config:
+    activate:
+      on-profile: local
 
   datasource:
     url: jdbc:mysql://localhost:3306/growme
     username: root
-    #password: Root1111!
     password: root1234
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -44,13 +50,29 @@ spring:
         format_sql: true
         show_sql: true
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+
+  # 로컬은 세션을 톰캣(메모리)로 유지
+  session:
+    store-type: none
+    timeout: 90d
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
   security:
     oauth2:
       client:
         registration:
           kakao:
-            client-id: 6699e3a56fa823259747625897e29c6f             # Kakao REST API 키
-            client-secret: DqChxaaDLsrynsHnUDsAQMJ8mGeq2xW9    # 시크릿 미사용 시 비워둬도 OK
+            client-id: 6699e3a56fa823259747625897e29c6f
+            client-secret: DqChxaaDLsrynsHnUDsAQMJ8mGeq2xW9
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
@@ -66,10 +88,13 @@ spring:
             user-info-uri:     https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
+server:
+  servlet:
+    session:
+      timeout: 90d
+      cookie:
+        secure: false
+        max-age: 90d
 
 cors:
   allowed-origins: "http://localhost:3000,http://localhost:5173"
@@ -79,11 +104,19 @@ security:
     secret: ${JWT_SECRET:dev-secret}
     access-token-minutes: 60
 
+management:
+  health:
+    redis:
+      enabled: false
 
-
+# -----------------------------------------------------------------------------
+# dev (EC2)
+# -----------------------------------------------------------------------------
 ---
 spring:
-  config.activate.on-profile: dev
+  config:
+    activate:
+      on-profile: dev
 
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -94,47 +127,9 @@ spring:
     hibernate:
       ddl-auto: update
 
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
-
-  security:
-    oauth2:
-      client:
-        registration:
-          kakao:
-            client-id: ${KAKAO_CLIENT_ID}
-            client-secret: ${KAKAO_CLIENT_SECRET:}
-            client-authentication-method: client_secret_post
-            authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope:
-              - profile_nickname
-              - profile_image
-              - account_email
-            client-name: Kakao
-        provider:
-          kakao:
-            authorization-uri: https://kauth.kakao.com/oauth/authorize
-            token-uri:         https://kauth.kakao.com/oauth/token
-            user-info-uri:     https://kapi.kakao.com/v2/user/me
-            user-name-attribute: id
-
-
-
----
-spring:
-  config.activate.on-profile: prod
-
-  datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-
-  jpa:
-    hibernate:
-      ddl-auto: validate
+  session:
+    store-type: redis
+    timeout: 90d
 
   data:
     redis:
@@ -164,6 +159,70 @@ spring:
             user-name-attribute: id
 
 server:
+  servlet:
+    session:
+      timeout: 90d
+      cookie:
+        secure: false
+        max-age: 90d
+
+# -----------------------------------------------------------------------------
+# prod
+# -----------------------------------------------------------------------------
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  session:
+    store-type: redis
+    timeout: 90d
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET:}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - profile_nickname
+              - profile_image
+              - account_email
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri:         https://kauth.kakao.com/oauth/token
+            user-info-uri:     https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+server:
+  servlet:
+    session:
+      timeout: 90d
+      cookie:
+        secure: true
+        max-age: 90d
+
   tomcat:
     threads:
       max: 200
