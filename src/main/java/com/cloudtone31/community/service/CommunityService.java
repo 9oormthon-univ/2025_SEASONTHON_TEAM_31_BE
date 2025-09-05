@@ -1,10 +1,8 @@
 package com.cloudtone31.community.service;
 
 import com.cloudtone31.community.domain.Community;
-import com.cloudtone31.community.dto.CommunityListResponseDTO;
-import com.cloudtone31.community.dto.CommunityRequestDTO;
-import com.cloudtone31.community.dto.CommunitySummaryDTO;
-import com.cloudtone31.community.dto.PaginationDTO;
+import com.cloudtone31.community.dto.*;
+import com.cloudtone31.community.repository.CommentRepository;
 import com.cloudtone31.community.repository.CommunityRepository;
 import com.cloudtone31.user.domain.User;
 import com.cloudtone31.user.repository.UserLoginRepository;
@@ -24,6 +22,7 @@ public class CommunityService {
 
     private final CommunityRepository communityRepository;
     private final UserLoginRepository userLoginRepository;
+    private final CommentRepository commentRepository;
 
     @Transactional
     public Community create(CommunityRequestDTO requestDTO, Long userId) {
@@ -57,7 +56,19 @@ public class CommunityService {
         PaginationDTO paginationDTO = PaginationDTO.from(communityPage);
 
         return new CommunityListResponseDTO(postSummaries, paginationDTO);
+    }
 
+    public CommunityDetailDTO getCommunityDetail(Long postId) {
+        Community community = communityRepository.findById(postId)
+                .orElseThrow(()-> new IllegalArgumentException("게시물을 찾을 수 없습니다."));
+
+        var comments = commentRepository.findByCommunityOrderByCreatedAtAsc(community);
+
+        List<CommentDetailDTO> commentDTOs = comments.stream()
+                .map(CommentDetailDTO::from)
+                .toList();
+
+        return CommunityDetailDTO.from(community, commentDTOs);
 
     }
 

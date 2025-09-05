@@ -68,6 +68,11 @@ public class CommunityController {
 
     }
 
+    @GetMapping("/{postId}")
+    public ResponseEntity<ApiResponse<CommunityDetailDTO>> getCommunityDetail(@PathVariable Long postId) {
+        CommunityDetailDTO data = communityService.getCommunityDetail(postId);
+        return ResponseEntity.ok(ApiResponse.ok(data, "게시물이 성공적으로 조회되었습니다."));
+    }
 
 
     /** OAuth2 attributes에서 Kakao ID를 문자열로 추출 */
