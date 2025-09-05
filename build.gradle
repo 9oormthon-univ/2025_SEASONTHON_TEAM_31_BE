@@ -29,6 +29,7 @@ dependencies {
 
     // Redis (세션/캐시/락/레이트리밋 대비)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation "org.springframework.session:spring-session-data-redis"
 
     // Security (JWT 연결 예정)
     implementation 'org.springframework.boot:spring-boot-starter-security'
