@@ -1,9 +1,8 @@
 package com.cloudtone31.community.controller;
 
 import com.cloudtone31.community.domain.Community;
-import com.cloudtone31.community.dto.CommunityListResponseDTO;
-import com.cloudtone31.community.dto.CommunityRequestDTO;
-import com.cloudtone31.community.dto.CommunityResponseDTO;
+import com.cloudtone31.community.dto.*;
+import com.cloudtone31.community.service.CommentService;
 import com.cloudtone31.community.service.CommunityService;
 import com.cloudtone31.global.api.ApiResponse;
 import com.cloudtone31.user.domain.User;
@@ -20,13 +19,14 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/community")
+@RequestMapping("/community/posts")
 public class CommunityController {
 
     private final CommunityService communityService;
     private final UserLoginRepository userLoginRepository;
+    private final CommentService commentService;
 
-    @PostMapping("/posts")
+    @PostMapping
     public ResponseEntity<?> createPost(@RequestBody CommunityRequestDTO requestDTO, @AuthenticationPrincipal OAuth2User principal) {
 
         String kakaoId = extractKakaoId(principal.getAttributes());
@@ -41,7 +41,7 @@ public class CommunityController {
 
     }
 
-    @GetMapping("/posts")
+    @GetMapping
     public ResponseEntity<ApiResponse<CommunityListResponseDTO>> getPostsList(
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "limit", defaultValue = "20") int limit,
@@ -51,7 +51,22 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(data, "게시물 목록이 성공적으로 조회되었습니다."));
     }
 
+    @PostMapping("/{postId}/comments")
+    public ResponseEntity<?> createComment(
+            @PathVariable Long postId,
+            @RequestBody CommentRequestDTO requestDTO,
+            @AuthenticationPrincipal OAuth2User principal){
+        String kakaoId = extractKakaoId(principal.getAttributes());
+        User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
+        Long userId = user.getId();
 
+        var createdComment = commentService.createComment(postId, userId, requestDTO);
+        var responseDTO = CommentResponseDTO.from(createdComment);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(responseDTO, "댓글이 작성되었습니다."));
+
+    }
 
 
 
