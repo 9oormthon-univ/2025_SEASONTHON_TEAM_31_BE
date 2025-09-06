@@ -1,11 +1,9 @@
 package com.cloudtone31.user.controller;
 
-import com.cloudtone31.auth.LoginUser;
 import com.cloudtone31.global.api.ApiResponse;
 import com.cloudtone31.user.domain.User;
 import com.cloudtone31.user.dto.NicknameReq;
 import com.cloudtone31.user.dto.NicknameRes;
-import com.cloudtone31.user.dto.UserMeDto;
 import com.cloudtone31.user.repository.UserLoginRepository;
 import com.cloudtone31.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +14,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.*;
@@ -51,9 +48,9 @@ public class UserController {
                 .orElseGet(() -> ResponseEntity.status(404).body(Map.of("message", "사용자를 찾을 수 없습니다.")));
     }
 
-    /** 회원탈퇴 : DELETE /users/delete (userId 기준으로 처리 권장) */
+    /** 회원탈퇴 : DELETE /users/delete */
     @DeleteMapping("/users/delete")
-    public ResponseEntity<ApiResponse<?>> deleteMe(@LoginUser String kakaoId,
+    public ResponseEntity<ApiResponse<?>> deleteMe(Authentication authentication,
                                                    HttpServletRequest request,
                                                    HttpServletResponse response) {
         String kakaoId = resolveKakaoId(authentication);
@@ -61,14 +58,14 @@ public class UserController {
             return ResponseEntity.status(401).body(ApiResponse.fail("인증이 필요합니다."));
         }
 
-        User user = userLoginRepository.findById(userId).orElse(null);
+        User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         if (user == null) {
             return ResponseEntity.status(404).body(ApiResponse.fail("사용자를 찾을 수 없습니다."));
         }
 
         userLoginRepository.delete(user);
 
-        // 세션 기반 로그인인 경우에만 세션/쿠키 정리 (JWT만 쓰는 클라이언트는 토큰 폐기로 충분)
+        // 세션 기반일 때만 세션/쿠키 정리 (JWT 전용 클라이언트는 토큰 폐기로 충분)
         new SecurityContextLogoutHandler().logout(request, response, authentication);
         ResponseCookie expired = ResponseCookie.from("JSESSIONID", "")
                 .path("/")
@@ -80,45 +77,62 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(null, "회원탈퇴가 완료되었습니다"));
     }
 
-    /** 닉네임 변경 : PUT /v1/auth/kakao/nickname  (userId 기준으로 바꾸는 걸 권장) */
+    /** 닉네임 변경 : PUT /v1/auth/kakao/nickname */
     @PutMapping("/v1/auth/kakao/nickname")
-    public ResponseEntity<ApiResponse<?>> updateNickname(@LoginUser String kakaoId,
+    public ResponseEntity<ApiResponse<?>> updateNickname(Authentication authentication,
                                                          @Valid @RequestBody NicknameReq req) {
-        String kakaoId = resolveKakaoId(authentication);
-        if (kakaoId == null) {
+        Long userId = resolveUserId(authentication); // userId 계산 (JWT or OAuth2 -> DB 조회)
+        if (userId == null) {
             return ResponseEntity.status(401).body(ApiResponse.fail("인증이 필요합니다."));
         }
 
-        User user = userLoginRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        User updated = userService.updateNicknameByUserId(user.getId(), req.getNickname()); // 서비스도 userId 기준 메서드 하나 두세요
+        User updated = userService.updateNicknameByUserId(userId, req.getNickname());
         NicknameRes body = new NicknameRes(updated.getId(), updated.getNickname());
         return ResponseEntity.ok(ApiResponse.ok(body, "닉네임이 변경되었습니다."));
     }
 
-    /** Authentication에서 kakaoId 추출 (JWT/세션 둘 다 지원) */
-    private String resolveKakaoId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) return null;
+    /* ===================== 헬퍼 ===================== */
 
+    /** JWT(Principal=String userId) & OAuth2 세션(OAuth2User) 모두 지원 */
+    private Long resolveUserId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) return null;
         Object principal = authentication.getPrincipal();
 
-        // 1) JWT 필터가 principal을 kakaoId(String)으로 넣는 경우
+        // 1) JWT: principal이 사용자 PK(String) 인 경우
         if (principal instanceof String s && !s.isBlank()) {
-            return s;
+            try {
+                return Long.parseLong(s);
+            } catch (NumberFormatException e) {
+                return null;
+            }
         }
 
-        // 2) 세션(OAuth2) 로그인인 경우
+        // 2) 세션(OAuth2): kakaoId → DB 조회로 userId 반환
         if (principal instanceof OAuth2User o) {
-            return extractKakaoIdFromAttributes(o.getAttributes());
+            String kakaoId = extractKakaoIdFromAttributes(o.getAttributes());
+            if (kakaoId == null) return null;
+            return userLoginRepository.findByKakaoId(kakaoId)
+                    .map(User::getId)
+                    .orElse(null);
         }
-
-        // 3) 필요하면 커스텀 Principal 타입도 처리
-        // if (principal instanceof JwtUserPrincipal p) return p.getKakaoId();
 
         return null;
     }
 
-    /** OAuth2 attributes에서 Kakao ID를 문자열로 추출 */
+    /** Authentication에서 kakaoId 추출 (주로 세션 로그인용) */
+    private String resolveKakaoId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) return null;
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof OAuth2User o) {
+            return extractKakaoIdFromAttributes(o.getAttributes());
+        }
+        // 필요 시 JWT의 principal이 kakaoId인 케이스 추가 가능
+
+        return null;
+    }
+
+    /** OAuth2 attributes에서 Kakao ID 추출 */
     private String extractKakaoIdFromAttributes(Map<String, Object> attributes) {
         for (String key : List.of("kakaoId", "kakao_id", "id", "sub")) {
             Object v = attributes.get(key);
