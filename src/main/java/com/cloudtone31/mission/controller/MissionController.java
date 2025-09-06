@@ -15,13 +15,10 @@ import com.cloudtone31.userplants.service.PlantsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/missions")
@@ -32,38 +29,47 @@ public class MissionController {
     private final PlantsService plantsService;
     private final UserLoginRepository userLoginRepository;
 
-
+    /** 오늘의 미션 조회 (조건 기반) */
     @GetMapping
     public ResponseEntity<ApiResponse<List<MissionResponseDto>>> getMissionsByCondition(
-           @LoginUser String kakaoId,
+            @LoginUser String kakaoId,
             @RequestParam("condition") String condition) {
+
+        if (!StringUtils.hasText(condition)) {
+            throw new IllegalArgumentException("condition 파라미터가 필요합니다.");
+        }
 
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long userId = user.getId();
 
         List<Missions> dailyMissions = missionService.getDailyMissions(userId, condition);
-
-        List<MissionResponseDto> responseDtos = dailyMissions.stream()
+        List<MissionResponseDto> body = dailyMissions.stream()
                 .map(MissionResponseDto::new)
-                .collect(Collectors.toList());
+                .toList();
 
-        return ResponseEntity.ok(ApiResponse.ok(responseDtos, "미션을 성공적으로 조회했습니다."));
+        return ResponseEntity.ok(ApiResponse.ok(body, "미션을 성공적으로 조회했습니다."));
     }
 
+    /** 미션 답변 제출 + 식물 성장 반영 */
     @PostMapping("/{missionId}/answers")
     public ResponseEntity<ApiResponse<AnswerResponseDto>> submitAnswer(
             @LoginUser String kakaoId,
-            @PathVariable("missionId") Long missionId,
+            @PathVariable Long missionId,
             @RequestBody MissionRequestDto requestDto) {
+
+        if (requestDto == null || !StringUtils.hasText(requestDto.getAnswerContent())) {
+            throw new IllegalArgumentException("answerContent가 비어있습니다.");
+        }
 
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long userId = user.getId();
 
         Answers savedAnswer = missionService.submitAnswer(userId, missionId, requestDto.getAnswerContent());
-        UserPlants grownPlant = plantsService.getMyPlant(userId);
 
+        // 식물 정보가 없을 수도 있으니 null-safe 로 처리
+        UserPlants grownPlant = plantsService.getMyPlant(userId); // 없으면 null 리턴한다고 가정
         AnswerResponseDto data = new AnswerResponseDto(savedAnswer, grownPlant);
 
         return ResponseEntity.status(HttpStatus.CREATED)

@@ -26,21 +26,20 @@ public class ConditionController {
     private final ConditionService conditionService;
     private final UserLoginRepository userLoginRepository;
 
-
     @PostMapping
     public ResponseEntity<ApiResponse<ConditionResponseDto>> registerCondition(
             @LoginUser String kakaoId,
-            @RequestBody ConditionRequestDto requestDto) {
+            @RequestBody /* @Valid */ ConditionRequestDto requestDto) {
 
-        User user = userLoginRepository.findByKakaoId(kakaoId)
+        var user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        Long userId = user.getId();
 
-        DailyCondition savedCondition = conditionService.createDailyCondition(userId, requestDto.getCondition());
+        var saved = conditionService.createDailyCondition(user.getId(), requestDto.getCondition());
+        var body = new ConditionResponseDto(saved);
 
-        ConditionResponseDto data = new ConditionResponseDto(savedCondition);
-
-        return ResponseEntity.ok(ApiResponse.ok(data, "컨디션이 등록되었습니다."));
+        return ResponseEntity
+                .status(201)
+                .body(ApiResponse.ok(body, "컨디션이 등록되었습니다."));
     }
 
     @GetMapping("/stats")
@@ -48,12 +47,10 @@ public class ConditionController {
             @LoginUser String kakaoId,
             @RequestParam(value = "period", defaultValue = "week") String period) {
 
-        User user = userLoginRepository.findByKakaoId(kakaoId)
+        var user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        Long userId = user.getId();
 
-        ConditionStatsResponseDto statsData = conditionService.getConditionStats(userId, period);
-
-        return ResponseEntity.ok(ApiResponse.ok(statsData, "컨디션 통계를 성공적으로 조회했습니다."));
+        var stats = conditionService.getConditionStats(user.getId(), period);
+        return ResponseEntity.ok(ApiResponse.ok(stats, "컨디션 통계를 성공적으로 조회했습니다."));
     }
 }
