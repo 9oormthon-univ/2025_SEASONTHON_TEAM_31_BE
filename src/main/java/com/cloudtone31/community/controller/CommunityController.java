@@ -12,6 +12,7 @@ import com.cloudtone31.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
@@ -30,9 +31,9 @@ public class CommunityController {
     private final CommunityLikeService communityLikeService;
 
     @PostMapping
-    public ResponseEntity<?> createPost(@RequestBody CommunityRequestDTO requestDTO, @AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<?> createPost(@RequestBody CommunityRequestDTO requestDTO, Authentication authentication) {
 
-        String kakaoId = extractKakaoId(principal.getAttributes());
+        String kakaoId = resolveKakaoId(authentication);
         User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         Long userId = user.getId();
         Community community = communityService.create(requestDTO, userId);
@@ -58,8 +59,8 @@ public class CommunityController {
     public ResponseEntity<?> createComment(
             @PathVariable Long postId,
             @RequestBody CommentRequestDTO requestDTO,
-            @AuthenticationPrincipal OAuth2User principal){
-        String kakaoId = extractKakaoId(principal.getAttributes());
+            Authentication authentication){
+        String kakaoId = resolveKakaoId(authentication);
         User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         Long userId = user.getId();
 
@@ -80,9 +81,9 @@ public class CommunityController {
     @PostMapping("/{postId}/like")
     public ResponseEntity<ApiResponse<?>> addLike(
                                                    @PathVariable Long postId,
-                                                   @AuthenticationPrincipal OAuth2User principal) {
+                                                   Authentication authentication) {
 
-        String kakaoId = extractKakaoId(principal.getAttributes());
+        String kakaoId = resolveKakaoId(authentication);
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
@@ -92,8 +93,30 @@ public class CommunityController {
     }
 
 
+    /** Authentication에서 kakaoId 추출 (JWT/세션 둘 다 지원) */
+    private String resolveKakaoId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) return null;
+
+        Object principal = authentication.getPrincipal();
+
+        // 1) JWT 필터가 principal을 kakaoId(String)으로 넣는 경우
+        if (principal instanceof String s && !s.isBlank()) {
+            return s;
+        }
+
+        // 2) 세션(OAuth2) 로그인인 경우
+        if (principal instanceof OAuth2User o) {
+            return extractKakaoIdFromAttributes(o.getAttributes());
+        }
+
+        // 3) 필요하면 커스텀 Principal 타입도 처리
+        // if (principal instanceof JwtUserPrincipal p) return p.getKakaoId();
+
+        return null;
+    }
+
     /** OAuth2 attributes에서 Kakao ID를 문자열로 추출 */
-    private String extractKakaoId(Map<String, Object> attributes) {
+    private String extractKakaoIdFromAttributes(Map<String, Object> attributes) {
         for (String key : List.of("kakaoId", "kakao_id", "id", "sub")) {
             Object v = attributes.get(key);
             if (v == null) continue;

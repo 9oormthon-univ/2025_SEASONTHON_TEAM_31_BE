@@ -40,6 +40,7 @@ public class Comments {
 
     // DB 기본값/자동 업데이트 사용 (DDL 기준)
     @Column(name = "created_at", insertable = false, updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", insertable = false, updatable = false)
