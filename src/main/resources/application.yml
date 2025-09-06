@@ -101,7 +101,7 @@ cors:
 security:
   jwt:
     # 환경변수 없으면 기동 실패시키며 원인 명확화
-    secret: ${JWT_SECRET:?JWT_SECRET is missing}
+    secret: Ew/RS4Xa3L+pTLia1DXzli/tinA+W5oue++V4fLCkksLSk48zgJC8ooHJGgcBFsM/aaxKOlehON0Jc0p8Shbyw==
     access-token-minutes: 60
 
 # -----------------------------------------------------------------------------
