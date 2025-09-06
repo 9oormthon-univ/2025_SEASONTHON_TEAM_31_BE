@@ -28,29 +28,38 @@ public class ConditionController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<ConditionResponseDto>> registerCondition(
-            @LoginUser String kakaoId,
-            @RequestBody /* @Valid */ ConditionRequestDto requestDto) {
+            @LoginUser String principal,
+            @RequestBody ConditionRequestDto requestDto) {
 
-        var user = userLoginRepository.findByKakaoId(kakaoId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Long userId = resolveUserIdFlexible(principal);
 
-        var saved = conditionService.createDailyCondition(user.getId(), requestDto.getCondition());
-        var body = new ConditionResponseDto(saved);
-
-        return ResponseEntity
-                .status(201)
-                .body(ApiResponse.ok(body, "컨디션이 등록되었습니다."));
+        DailyCondition saved = conditionService.createDailyCondition(userId, requestDto.getCondition());
+        ConditionResponseDto data = new ConditionResponseDto(saved);
+        return ResponseEntity.ok(ApiResponse.ok(data, "컨디션이 등록되었습니다."));
     }
 
     @GetMapping("/stats")
     public ResponseEntity<ApiResponse<ConditionStatsResponseDto>> getConditionStatistics(
-            @LoginUser String kakaoId,
+            @LoginUser String principal,
             @RequestParam(value = "period", defaultValue = "week") String period) {
 
-        var user = userLoginRepository.findByKakaoId(kakaoId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Long userId = resolveUserIdFlexible(principal);
 
-        var stats = conditionService.getConditionStats(user.getId(), period);
+        ConditionStatsResponseDto stats = conditionService.getConditionStats(userId, period);
         return ResponseEntity.ok(ApiResponse.ok(stats, "컨디션 통계를 성공적으로 조회했습니다."));
+    }
+
+    /** "3" 같은 숫자면 userId, 그 외면 kakaoId로 조회 */
+    private Long resolveUserIdFlexible(String principal) {
+        if (principal == null || principal.isBlank()) {
+            throw new IllegalArgumentException("인증 정보가 없습니다.");
+        }
+        boolean numeric = principal.chars().allMatch(Character::isDigit);
+        if (numeric) {
+            return Long.parseLong(principal);
+        }
+        return userLoginRepository.findByKakaoId(principal)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
 }
