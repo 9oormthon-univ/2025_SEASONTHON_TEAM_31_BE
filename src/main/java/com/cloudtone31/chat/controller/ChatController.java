@@ -1,35 +1,49 @@
 package com.cloudtone31.chat.controller;
 
+import com.cloudtone31.auth.LoginUser;
 import com.cloudtone31.chat.dto.*;
 import com.cloudtone31.chat.service.GptService;
 import com.cloudtone31.chat.service.RiskAssessmentService;
+import com.cloudtone31.global.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 
 @RestController
-@RequestMapping("/chat/messages")
+@RequestMapping(value = "/chat/messages", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequiredArgsConstructor
 public class ChatController {
+
     private final GptService gptService;
     private final RiskAssessmentService riskAssessmentService;
 
-    @Autowired
-    public ChatController(GptService gptService, RiskAssessmentService riskAssessmentService) {
-        this.gptService = gptService;
-        this.riskAssessmentService = riskAssessmentService;
-    }
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> chat(
+            @LoginUser String userIdStr,   // JWT의 sub(userId)를 문자열로 받음
+            @RequestBody ChatRequestDTO requestDTO
+    ) {
+        // 1) 인증 확인
+        Long userId = parseUserIdOr401(userIdStr);
 
-    @PostMapping
-    public ResponseEntity<?> chat(@RequestBody ChatRequestDTO requestDTO) {
-        RiskAssessmentService.RiskLevel riskLevel = riskAssessmentService.assessRisk(requestDTO.getMessage());
+        // 2) 입력 검증
+        if (requestDTO == null || !StringUtils.hasText(requestDTO.getMessage())) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.fail("message는 비어 있을 수 없습니다."));
+        }
+        String message = requestDTO.getMessage().trim();
+        if (message.length() > 2_000) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.fail("message가 너무 깁니다. (최대 2000자)"));
+        }
 
-        if(riskLevel == RiskAssessmentService.RiskLevel.DANGER){
+        // 3) 위험도 평가
+        RiskAssessmentService.RiskLevel riskLevel = riskAssessmentService.assessRisk(message);
+
+        if (riskLevel == RiskAssessmentService.RiskLevel.DANGER) {
             HelplineDTO helpline = HelplineDTO.builder()
                     .suicidePrevention("1577-0199")
                     .youthCounseling("1388")
@@ -37,25 +51,26 @@ public class ChatController {
 
             DangerResponseDTO dangerResponse = DangerResponseDTO.builder()
                     .riskLevel("danger")
-                    .message("지금 힘든 상황이시군요. 전문가와 상담해보시는 것이 어떨까요?")
+                    .message("지금 매우 힘든 상황이 느껴져요. 가까운 분께 도움을 요청하거나 전문 상담기관과 연결을 권해드릴게요.")
                     .helpline(helpline)
                     .build();
-            return ResponseEntity.ok(dangerResponse);
 
+            // 필요시 userId로 기록/알림 로깅 등 서비스 호출 가능
+            return ResponseEntity.ok(dangerResponse);
         }
 
         if (riskLevel == RiskAssessmentService.RiskLevel.WARNING) {
-            return ResponseEntity.ok(ApiResponseDTO.<String>builder()
-                    .success(true)
-                    .data("많이 힘드시군요. 혼자 고민하기보다 전문가의 도움을 받아보는 것을 권해드립니다.")
-                    .message("전문 상담 권유")
-                    .build());
+            return ResponseEntity.ok(ApiResponse.ok(
+                    "많이 힘드시군요. 혼자 고민하기보다 전문가의 도움을 받아보는 것을 권해드립니다.",
+                    "전문 상담 권유"
+            ));
         }
 
-        String gptResponse = gptService.getGptResponse(requestDTO.getMessage());
+        // 4) GPT 응답 (필요하면 userId 전달해 개인화/컨텍스트 저장)
+        String gptResponse = gptService.getGptResponse(message);
 
         MessageDTO userMessage = MessageDTO.builder()
-                .message(requestDTO.getMessage())
+                .message(message)
                 .sender("user")
                 .timestamp(Instant.now().toString())
                 .build();
@@ -71,12 +86,23 @@ public class ChatController {
                 .gptResponse(gptMessage)
                 .build();
 
-        return ResponseEntity.ok(ApiResponseDTO.<ChatDataDTO>builder()
-                .success(true)
-                .data(chatData)
-                .message("메시지가 전송되었습니다.")
-                .build());
+        return ResponseEntity.ok(ApiResponse.ok(chatData, "메시지가 전송되었습니다."));
     }
 
+    /** userId 문자열을 Long으로 파싱, 실패 시 401로 처리하기 위한 헬퍼 */
+    private Long parseUserIdOr401(String userIdStr) {
+        if (!StringUtils.hasText(userIdStr)) {
+            throw new UnauthorizedException("인증이 필요합니다."); // GlobalExceptionHandler에서 401 매핑 가정
+        }
+        try {
+            return Long.parseLong(userIdStr);
+        } catch (NumberFormatException e) {
+            throw new UnauthorizedException("잘못된 인증 주체(sub) 형식입니다.");
+        }
+    }
 
+    // 간단한 401용 런타임 예외 (프로젝트 공통 예외가 있다면 그걸 사용)
+    static class UnauthorizedException extends RuntimeException {
+        public UnauthorizedException(String message) { super(message); }
+    }
 }
