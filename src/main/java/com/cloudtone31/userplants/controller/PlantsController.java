@@ -1,5 +1,6 @@
 package com.cloudtone31.userplants.controller;
 
+import com.cloudtone31.auth.LoginUser;
 import com.cloudtone31.global.api.ApiResponse;
 import com.cloudtone31.userplants.domain.UserPlants;
 import com.cloudtone31.userplants.dto.CompleteAndCreatePlantResponseDto;
@@ -26,22 +27,10 @@ public class PlantsController {
     private final PlantsService plantsService;
     private final UserLoginRepository userLoginRepository;
 
-    private String extractKakaoId(Map<String, Object> attributes) {
-        for (String key : List.of("kakaoId", "kakao_id", "id", "sub")) {
-            Object v = attributes.get(key);
-            if (v == null) continue;
-            if (v instanceof String s && !s.isBlank()) return s;
-            if (v instanceof Number n) return String.valueOf(n.longValue());
-            return String.valueOf(v);
-        }
-        return null;
-    }
 
     // [GET] /plants/my
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<?>> getMyPlant(@AuthenticationPrincipal OAuth2User principal) {
-
-        String kakaoId = extractKakaoId(principal.getAttributes());
+    public ResponseEntity<ApiResponse<?>> getMyPlant(@LoginUser String kakaoId) {
 
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
@@ -56,11 +45,10 @@ public class PlantsController {
     // [PUT] /plants/{plantId}/name
     @PutMapping("/{plantId}/name")
     public ResponseEntity<ApiResponse<?>> updatePlantName(
-            @AuthenticationPrincipal OAuth2User principal,
+            @LoginUser String kakaoId,
             @PathVariable("plantId") Long plantId,
             @RequestBody UpdatePlantNameRequestDto requestDto) {
 
-        String kakaoId = extractKakaoId(principal.getAttributes());
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long userId = user.getId();
@@ -77,9 +65,8 @@ public class PlantsController {
 
     // [GET] /plants/collection
     @GetMapping("/collection")
-    public ResponseEntity<ApiResponse<?>> getPlantCollection(@AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<ApiResponse<?>> getPlantCollection(@LoginUser String kakaoId) {
 
-        String kakaoId = extractKakaoId(principal.getAttributes());
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long userId = user.getId();
@@ -91,9 +78,8 @@ public class PlantsController {
 
     // [POST] /plants/complete
     @PostMapping("/complete")
-    public ResponseEntity<ApiResponse<?>> completePlant(@AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<ApiResponse<?>> completePlant(@LoginUser String kakaoId) {
 
-        String kakaoId = extractKakaoId(principal.getAttributes());
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long userId = user.getId();
