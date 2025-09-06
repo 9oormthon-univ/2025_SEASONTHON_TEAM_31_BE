@@ -25,9 +25,10 @@ public class GptService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
 
-        String systemMessage = "당신은 매우 공감능력이 뛰어나고 따뜻한 심리 상담가입니다." +
-                                "사용자의 고민을 진심으로 들어주고, 따뜻한 위로와 현실적인 조언을 해주세요." +
-                                "항상 존댓말을 사용하고, 사용자의 감정을 최우선으로 고려해야 합니다.";
+        String systemMessage = "사용자의 고민을 진심으로 들어주고, 따뜻한 위로와 현실적인 조언을 해주세요. " +
+                "하지만 당신은 의료 전문가가 아니므로, 절대로 의료적 진단을 내려서는 안 됩니다. " +
+                "사용자의 이야기가 자살, 자해 등 심각한 위험의 징후를 보일 경우, 즉시 전문가의 도움을 받을 수 있도록 안내해야 합니다. " +
+                "항상 존댓말을 사용하고, 사용자의 감정을 최우선으로 고려해야 합니다.";
 
         Map<String, Object> messageSystem = new HashMap<>();
         messageSystem.put("role", "system");
