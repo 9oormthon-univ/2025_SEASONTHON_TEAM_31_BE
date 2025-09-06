@@ -1,5 +1,6 @@
 package com.cloudtone31.community.controller;
 
+import com.cloudtone31.auth.LoginUser;
 import com.cloudtone31.community.domain.Community;
 import com.cloudtone31.community.dto.*;
 import com.cloudtone31.community.service.CommentService;
@@ -31,9 +32,8 @@ public class CommunityController {
     private final CommunityLikeService communityLikeService;
 
     @PostMapping
-    public ResponseEntity<?> createPost(@RequestBody CommunityRequestDTO requestDTO, Authentication authentication) {
+    public ResponseEntity<?> createPost(@RequestBody CommunityRequestDTO requestDTO, @LoginUser String kakaoId) {
 
-        String kakaoId = resolveKakaoId(authentication);
         User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         Long userId = user.getId();
         Community community = communityService.create(requestDTO, userId);
@@ -59,8 +59,7 @@ public class CommunityController {
     public ResponseEntity<?> createComment(
             @PathVariable Long postId,
             @RequestBody CommentRequestDTO requestDTO,
-            Authentication authentication){
-        String kakaoId = resolveKakaoId(authentication);
+            @LoginUser String kakaoId){
         User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
         Long userId = user.getId();
 
@@ -81,9 +80,8 @@ public class CommunityController {
     @PostMapping("/{postId}/like")
     public ResponseEntity<ApiResponse<?>> addLike(
                                                    @PathVariable Long postId,
-                                                   Authentication authentication) {
+                                                   @LoginUser String kakaoId) {
 
-        String kakaoId = resolveKakaoId(authentication);
         User user = userLoginRepository.findByKakaoId(kakaoId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
@@ -93,38 +91,5 @@ public class CommunityController {
     }
 
 
-    /** Authentication에서 kakaoId 추출 (JWT/세션 둘 다 지원) */
-    private String resolveKakaoId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) return null;
-
-        Object principal = authentication.getPrincipal();
-
-        // 1) JWT 필터가 principal을 kakaoId(String)으로 넣는 경우
-        if (principal instanceof String s && !s.isBlank()) {
-            return s;
-        }
-
-        // 2) 세션(OAuth2) 로그인인 경우
-        if (principal instanceof OAuth2User o) {
-            return extractKakaoIdFromAttributes(o.getAttributes());
-        }
-
-        // 3) 필요하면 커스텀 Principal 타입도 처리
-        // if (principal instanceof JwtUserPrincipal p) return p.getKakaoId();
-
-        return null;
-    }
-
-    /** OAuth2 attributes에서 Kakao ID를 문자열로 추출 */
-    private String extractKakaoIdFromAttributes(Map<String, Object> attributes) {
-        for (String key : List.of("kakaoId", "kakao_id", "id", "sub")) {
-            Object v = attributes.get(key);
-            if (v == null) continue;
-            if (v instanceof String s && !s.isBlank()) return s;
-            if (v instanceof Number n) return String.valueOf(n.longValue());
-            return String.valueOf(v);
-        }
-        return null;
-    }
 
 }
