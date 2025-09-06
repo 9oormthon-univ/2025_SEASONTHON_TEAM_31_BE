@@ -32,16 +32,14 @@ public class MissionController {
     /** 오늘의 미션 조회 (조건 기반) */
     @GetMapping
     public ResponseEntity<ApiResponse<List<MissionResponseDto>>> getMissionsByCondition(
-            @LoginUser String kakaoId,
+            @LoginUser String principal,
             @RequestParam("condition") String condition) {
 
         if (!StringUtils.hasText(condition)) {
             throw new IllegalArgumentException("condition 파라미터가 필요합니다.");
         }
 
-        User user = userLoginRepository.findByKakaoId(kakaoId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        Long userId = user.getId();
+        Long userId = resolveUserIdFlexible(principal);
 
         List<Missions> dailyMissions = missionService.getDailyMissions(userId, condition);
         List<MissionResponseDto> body = dailyMissions.stream()
@@ -54,7 +52,7 @@ public class MissionController {
     /** 미션 답변 제출 + 식물 성장 반영 */
     @PostMapping("/{missionId}/answers")
     public ResponseEntity<ApiResponse<AnswerResponseDto>> submitAnswer(
-            @LoginUser String kakaoId,
+            @LoginUser String principal,
             @PathVariable Long missionId,
             @RequestBody MissionRequestDto requestDto) {
 
@@ -62,17 +60,26 @@ public class MissionController {
             throw new IllegalArgumentException("answerContent가 비어있습니다.");
         }
 
-        User user = userLoginRepository.findByKakaoId(kakaoId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        Long userId = user.getId();
+        Long userId = resolveUserIdFlexible(principal);
 
         Answers savedAnswer = missionService.submitAnswer(userId, missionId, requestDto.getAnswerContent());
+        UserPlants grownPlant = plantsService.getMyPlant(userId); // 없으면 null 가능
 
-        // 식물 정보가 없을 수도 있으니 null-safe 로 처리
-        UserPlants grownPlant = plantsService.getMyPlant(userId); // 없으면 null 리턴한다고 가정
         AnswerResponseDto data = new AnswerResponseDto(savedAnswer, grownPlant);
-
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(data, "답변이 제출되었습니다. 식물이 성장했습니다!"));
+    }
+
+    /** "3" 같은 숫자면 userId, 그 외면 kakaoId로 조회 */
+    private Long resolveUserIdFlexible(String principal) {
+        if (principal == null || principal.isBlank()) {
+            throw new IllegalArgumentException("인증 정보가 없습니다.");
+        }
+        boolean numeric = principal.chars().allMatch(Character::isDigit);
+        if (numeric) return Long.parseLong(principal);
+
+        return userLoginRepository.findByKakaoId(principal)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
 }

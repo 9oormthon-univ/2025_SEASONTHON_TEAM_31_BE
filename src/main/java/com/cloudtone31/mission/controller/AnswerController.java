@@ -18,43 +18,39 @@ public class AnswerController {
     private final AnswerService answerService;
     private final UserLoginRepository userLoginRepository;
 
-    /**
-     * 답변 히스토리 조회
-     * GET /answers/history?page=1&limit=20&date_from=2025-09-01&date_to=2025-09-07
-     */
+    /** 답변 히스토리 조회 */
     @GetMapping("/history")
     public ResponseEntity<?> getAnswerHistory(
-            @LoginUser String kakaoId,
+            @LoginUser String principal,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "limit", defaultValue = "20") int limit,
             @RequestParam(value = "date_from", required = false) String dateFrom,
             @RequestParam(value = "date_to", required = false) String dateTo
     ) {
-        // 1) 인증 확인
-        if (kakaoId == null || kakaoId.isBlank()) {
-            return ResponseEntity.status(401)
-                    .body(ApiResponse.fail("인증이 필요합니다."));
-        }
-
-        // 2) 파라미터 가드
         if (page < 1) page = 1;
         if (limit < 1) limit = 20;
         if (limit > 100) limit = 100;
 
-        // 3) 사용자 조회 (NPE 방지)
-        User user = userLoginRepository.findByKakaoId(kakaoId).orElse(null);
-        if (user == null) {
-            return ResponseEntity.status(404)
-                    .body(ApiResponse.fail("사용자를 찾을 수 없습니다."));
-        }
-        Long userId = user.getId();
+        Long userId = resolveUserIdFlexible(principal);
 
-        // 4) 서비스 호출 (서비스 시그니처 그대로: String dateFrom/dateTo)
-        AnswerHistoryResponseDto historyData =
+        AnswerHistoryResponseDto history =
                 answerService.getAnswerHistory(userId, page, limit, dateFrom, dateTo);
 
         return ResponseEntity.ok(
-                ApiResponse.ok(historyData, "답변 히스토리를 성공적으로 조회했습니다.")
+                ApiResponse.ok(history, "답변 히스토리를 성공적으로 조회했습니다.")
         );
+    }
+
+    /** "3" 같은 숫자면 userId, 그 외면 kakaoId로 조회 */
+    private Long resolveUserIdFlexible(String principal) {
+        if (principal == null || principal.isBlank()) {
+            throw new IllegalArgumentException("인증 정보가 없습니다.");
+        }
+        boolean numeric = principal.chars().allMatch(Character::isDigit);
+        if (numeric) return Long.parseLong(principal);
+
+        return userLoginRepository.findByKakaoId(principal)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
 }
