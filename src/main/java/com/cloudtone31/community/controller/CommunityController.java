@@ -3,10 +3,12 @@ package com.cloudtone31.community.controller;
 import com.cloudtone31.community.domain.Community;
 import com.cloudtone31.community.dto.*;
 import com.cloudtone31.community.service.CommentService;
+import com.cloudtone31.community.service.CommunityLikeService;
 import com.cloudtone31.community.service.CommunityService;
 import com.cloudtone31.global.api.ApiResponse;
 import com.cloudtone31.user.domain.User;
 import com.cloudtone31.user.repository.UserLoginRepository;
+import com.cloudtone31.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,7 @@ public class CommunityController {
     private final CommunityService communityService;
     private final UserLoginRepository userLoginRepository;
     private final CommentService commentService;
+    private final CommunityLikeService communityLikeService;
 
     @PostMapping
     public ResponseEntity<?> createPost(@RequestBody CommunityRequestDTO requestDTO, @AuthenticationPrincipal OAuth2User principal) {
@@ -72,6 +75,20 @@ public class CommunityController {
     public ResponseEntity<ApiResponse<CommunityDetailDTO>> getCommunityDetail(@PathVariable Long postId) {
         CommunityDetailDTO data = communityService.getCommunityDetail(postId);
         return ResponseEntity.ok(ApiResponse.ok(data, "게시물이 성공적으로 조회되었습니다."));
+    }
+
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<ApiResponse<?>> addLike(
+                                                   @PathVariable Long postId,
+                                                   @AuthenticationPrincipal OAuth2User principal) {
+
+        String kakaoId = extractKakaoId(principal.getAttributes());
+        User user = userLoginRepository.findByKakaoId(kakaoId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        communityLikeService.addLike(postId, user.getId()); // 반환값이 없도록 수정
+
+        return ResponseEntity.ok(ApiResponse.ok("게시물에 좋아요를 눌렀습니다."));
     }
 
 
