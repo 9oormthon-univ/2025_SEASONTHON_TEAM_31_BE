@@ -45,4 +45,9 @@ public class Community {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    public void incrementLikeCount() {
+        likeCount++;
+    }
+
 }
