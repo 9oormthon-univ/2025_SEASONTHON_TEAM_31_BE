@@ -14,7 +14,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -35,74 +34,74 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final ClientRegistrationRepository clientRegistrationRepository;
 
-    private final JwtService jwtService; // 주입 받아야 함
+    private final JwtService jwtService;
 
     @Bean
     public JwtAuthFilter jwtAuthFilter() {
         return new JwtAuthFilter(jwtService);
     }
 
-
     /**
-     * Kakao 권한요청 시 항상 로그인 화면을 띄우기 위한 커스터마이저 (자동승인/자동로그인 방지)
+     * Kakao 권한요청 시 항상 로그인 화면을 띄우도록 prompt=login 추가
      */
     @Bean
     public OAuth2AuthorizationRequestResolver kakaoAuthorizationRequestResolver() {
         DefaultOAuth2AuthorizationRequestResolver delegate =
                 new DefaultOAuth2AuthorizationRequestResolver(
                         clientRegistrationRepository,
-                        "/oauth2/authorization" // 기본 매핑
+                        "/oauth2/authorization"
                 );
-
         delegate.setAuthorizationRequestCustomizer(customizer ->
-                customizer.additionalParameters(params -> {
-                    // 항상 로그인 화면 강제. (필요시 "consent" 또는 "login consent" 등으로 조정)
-                    params.put("prompt", "login");
-                })
+                customizer.additionalParameters(params -> params.put("prompt", "login"))
         );
         return delegate;
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http,
-                                           OAuth2AuthorizationRequestResolver kakaoAuthResolver, JwtAuthFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            OAuth2AuthorizationRequestResolver kakaoAuthResolver,
+            JwtAuthFilter jwtAuthFilter
+    ) throws Exception {
+
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm
+                        // OAuth2 로그인 시에만 세션이 필요하므로 IF_REQUIRED
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .sessionFixation(sf -> sf.migrateSession())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1) 로그인 시작 URL은 '로그인 안 된 사용자만'
+                        // OAuth2 시작 URL은 비로그인 사용자만 접근 허용
                         .requestMatchers("/oauth2/authorization/**").anonymous()
 
-                        // 2) 나머지 공개 엔드포인트
+                        // 공개 엔드포인트
                         .requestMatchers(
                                 "/", "/error",
                                 "/health", "/actuator/**",
                                 "/index.html",
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
+                                "/swagger-ui.html", "/swagger-ui/**",
                                 "/v3/api-docs", "/v3/api-docs/**",
+                                // OAuth2 콜백·로그인 관련
                                 "/oauth2/**", "/login/**",
-                                "/v1/auth/kakao/url", "/v1/auth/kakao/callback",
-                                "/v1/auth/kakao/mobile-url",
+                                // 로그인 URL/모바일 URL 노출(선택)
+                                "/v1/auth/kakao/url", "/v1/auth/kakao/mobile-url",
+                                // 토큰 교환 & 갱신 (Expo 전용 플로우)
                                 "/v1/auth/token/exchange",
-                                "/v1/auth/token/exchange-code",
                                 "/v1/auth/token/refresh"
                         ).permitAll()
 
-                        // 3) 인증 필요
+                        // 보호 API
                         .requestMatchers("/users/me", "/v1/auth/kakao/logout").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/users/delete").authenticated()
+
+                        // 그 외는 모두 인증
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
                         .loginPage("/oauth2/authorization/kakao")
-                        .authorizationEndpoint(ep -> ep
-                                .authorizationRequestResolver(kakaoAuthResolver)
-                        )
+                        .authorizationEndpoint(ep -> ep.authorizationRequestResolver(kakaoAuthResolver))
                         .userInfoEndpoint(user -> user.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)
@@ -112,23 +111,30 @@ public class SecurityConfig {
                         .clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
-                        .logoutSuccessHandler((req, res, auth) -> res.setStatus(204)) // 리다이렉트 대신 204
+                        .logoutSuccessHandler((req, res, auth) -> res.setStatus(204))
                 )
-                .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
-                    res.setStatus(401);
-                    res.setContentType("application/json;charset=UTF-8");
-                    res.getWriter().write("{\"success\":false,\"message\":\"인증이 필요합니다.\"}");
-                }))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);;
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(401);
+                            res.setContentType("application/json;charset=UTF-8");
+                            res.getWriter().write("{\"success\":false,\"message\":\"인증이 필요합니다.\"}");
+                        })
+                )
+                // JWT 검증은 Username/Password 인증 필터보다 먼저
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        // 필요시 application.yml의 cors.allowed-origins를 읽어오도록 변경 가능
         CorsConfiguration c = new CorsConfiguration();
-        c.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+        // 웹 프론트에서만 의미가 있음 (React Native는 CORS 미적용)
+        c.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://growme-service.shop"
+        ));
         c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         c.setAllowedHeaders(List.of("*"));
         c.setAllowCredentials(true);

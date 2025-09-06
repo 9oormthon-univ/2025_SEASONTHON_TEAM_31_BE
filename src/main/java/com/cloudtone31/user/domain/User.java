@@ -8,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -45,4 +46,7 @@ public class User {
     // 편의 메서드
     public void updateNickname(String nickname) { this.nickname = nickname; }
     public void updateLastLoginAt(LocalDateTime now) { this.lastLoginAt = now; }
+    public void updateName(String name) { this.name = name; }
+    public void updateProfileImage(String profileImage) { this.profileImage = profileImage; }
+    public void updateEmail(String email) { this.email = email; }
 }

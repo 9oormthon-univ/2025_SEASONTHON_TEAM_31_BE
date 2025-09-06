@@ -1,6 +1,7 @@
 package com.cloudtone31.auth.controller;
 
 import com.cloudtone31.auth.service.JwtService;
+import com.cloudtone31.auth.service.OneTimeCodeService;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -9,44 +10,27 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
 @RestController
-@RequestMapping("/v1/auth")
+@RequestMapping("/v1/auth/token")
 @RequiredArgsConstructor
 public class TokenController {
 
-    private final StringRedisTemplate redisTemplate;
+    private final OneTimeCodeService codeService;
     private final JwtService jwtService;
 
-    @PostMapping("/token/exchange")
-    public ResponseEntity<?> exchangeWithSession(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(Map.of("error","unauthenticated"));
-        }
-        String userId = authentication.getName(); // 또는 principal에서 꺼내기
-        String access = jwtService.issueAccess(userId);
-        String refresh = jwtService.issueRefresh(userId);
-        return ResponseEntity.ok(Map.of(
-                "tokenType", "Bearer",
-                "accessToken", access,
-                "refreshToken", refresh,
-                "expiresIn", 60*60
-        ));
-    }
-
-    // 코드 기반 교환(모바일/딥링크)
-    @PostMapping("/token/exchange-code")
+    // 모바일/딥링크 기반 교환
+    // Expo(모바일) 전용 1회용 코드 교환
+    @PostMapping("/exchange")
     public ResponseEntity<?> exchangeByCode(@RequestBody Map<String,String> body) {
         String code = body.get("code");
         if (code == null || code.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error","missing_code"));
         }
-        String key = "login:code:" + code;
-        String userId = redisTemplate.opsForValue().get(key);
+
+        String userId = codeService.consume(code);
         if (userId == null) {
-            return ResponseEntity.badRequest().body(Map.of("error","invalid_or_expired_code"));
+            return ResponseEntity.status(401).body(Map.of("error","invalid_or_expired_code"));
         }
-        redisTemplate.delete(key);
 
         String access = jwtService.issueAccess(userId);
         String refresh = jwtService.issueRefresh(userId);
@@ -58,7 +42,8 @@ public class TokenController {
         ));
     }
 
-    @PostMapping("/token/refresh")
+    // Refresh 토큰 재발급
+    @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@RequestBody Map<String, String> body) {
         String refresh = body.get("refreshToken");
         if (refresh == null) return ResponseEntity.badRequest().build();
