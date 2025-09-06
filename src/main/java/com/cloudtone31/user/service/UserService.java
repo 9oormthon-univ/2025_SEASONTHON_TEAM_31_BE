@@ -13,10 +13,10 @@ public class UserService {
     private final UserLoginRepository userLoginRepository;
 
     @Transactional
-    public User updateNickname(String kakaoId, String nickname) {
-        User u = userLoginRepository.findByKakaoId(kakaoId)
+    public User updateNicknameByUserId(Long userId, String nickname) {
+        User u = userLoginRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        u.updateNickname(nickname);  // 엔티티 메서드 호출
-        return u; // JPA 변경 감지로 자동 UPDATE 실행됨
+        u.updateNickname(nickname);
+        return userLoginRepository.save(u);
     }
 }
