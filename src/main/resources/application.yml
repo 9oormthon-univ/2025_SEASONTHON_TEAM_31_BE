@@ -160,6 +160,11 @@ server:
         secure: false
         max-age: 90d
 
+#security:
+#  jwt:
+#    secret: Ew/RS4Xa3L+pTLia1DXzli/tinA+W5oue++V4fLCkksLSk48zgJC8ooHJGgcBFsM/aaxKOlehON0Jc0p8Shbyw==
+#    access-token-minutes: 60
+
 # -----------------------------------------------------------------------------
 # prod
 # -----------------------------------------------------------------------------

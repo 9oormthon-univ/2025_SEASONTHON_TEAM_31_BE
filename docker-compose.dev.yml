@@ -9,7 +9,7 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       TZ: Asia/Seoul
     ports:
-      - "3306:3306"           # 외부 공개가 불필요하면 "127.0.0.1:3306:3306" 권장
+      - "3306:3306"
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     volumes:
       - mysql_data:/var/lib/mysql
@@ -19,13 +19,16 @@ services:
     image: redis:7.2
     container_name: growme-redis
     ports:
-      - "6379:6379"           # 불필요하면 "127.0.0.1:6379:6379" 권장
+      - "6379:6379"
     restart: unless-stopped
 
   app:
-    image: docker.io/juheunshim/growme-be:dev-${GIT_SHA}   # ← Docker Hub 경로(소문자)
+    # GIT_SHA 미설정 경고가 싫다면 고정 태그로 바꾸세요 (예: dev-latest)
+    image: docker.io/juheunshim/growme-be:dev-${GIT_SHA}
     container_name: growme-app
     env_file: .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
     ports:
       - "8080:8080"
     depends_on:
