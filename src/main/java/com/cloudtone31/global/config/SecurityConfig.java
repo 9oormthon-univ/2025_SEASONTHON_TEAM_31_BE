@@ -1,6 +1,8 @@
 package com.cloudtone31.global.config;
 
 import com.cloudtone31.auth.service.CustomOAuth2UserService;
+import com.cloudtone31.auth.service.JwtService;
+import com.cloudtone31.global.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,6 +34,14 @@ public class SecurityConfig {
     private final AuthenticationFailureHandler oAuth2FailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final ClientRegistrationRepository clientRegistrationRepository;
+
+    private final JwtService jwtService; // 주입 받아야 함
+
+    @Bean
+    public JwtAuthFilter jwtAuthFilter() {
+        return new JwtAuthFilter(jwtService);
+    }
+
 
     /**
      * Kakao 권한요청 시 항상 로그인 화면을 띄우기 위한 커스터마이저 (자동승인/자동로그인 방지)
@@ -54,7 +65,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           OAuth2AuthorizationRequestResolver kakaoAuthResolver) throws Exception {
+                                           OAuth2AuthorizationRequestResolver kakaoAuthResolver, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -63,7 +74,10 @@ public class SecurityConfig {
                         .sessionFixation(sf -> sf.migrateSession())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 공개 엔드포인트
+                        // 1) 로그인 시작 URL은 '로그인 안 된 사용자만'
+                        .requestMatchers("/oauth2/authorization/**").anonymous()
+
+                        // 2) 나머지 공개 엔드포인트
                         .requestMatchers(
                                 "/", "/error",
                                 "/health", "/actuator/**",
@@ -72,18 +86,16 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs", "/v3/api-docs/**",
                                 "/oauth2/**", "/login/**",
-                                "/v1/auth/kakao/url", "/v1/auth/kakao/callback"
+                                "/v1/auth/kakao/url", "/v1/auth/kakao/callback",
+                                "/v1/auth/kakao/mobile-url",
+                                "/v1/auth/token/exchange",
+                                "/v1/auth/token/exchange-code",
+                                "/v1/auth/token/refresh"
                         ).permitAll()
 
-                        // 로그인 시작 URL은 로그인 안 된 사용자만 접근(이미 로그인 상태면 막음)
-                        .requestMatchers("/oauth2/authorization/**").anonymous()
-
-                        // 인증 필요 엔드포인트
+                        // 3) 인증 필요
                         .requestMatchers("/users/me", "/v1/auth/kakao/logout").authenticated()
-                        .requestMatchers("/v1/auth/kakao/nickname").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/users/delete").authenticated()
-
-                        // 나머지는 기본적으로 인증
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
@@ -106,7 +118,8 @@ public class SecurityConfig {
                     res.setStatus(401);
                     res.setContentType("application/json;charset=UTF-8");
                     res.getWriter().write("{\"success\":false,\"message\":\"인증이 필요합니다.\"}");
-                }));
+                }))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);;
 
         return http.build();
     }
