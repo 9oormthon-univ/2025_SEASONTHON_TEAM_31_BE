@@ -22,7 +22,7 @@ public class Missions {
     private Long id;
 
     // 예약어 충돌 회피
-    @Column(name = "condition", nullable = false, length = 255)
+    @Column(name = "mission_condition", nullable = false)
     private String condition;
 
     @Column(nullable = false, columnDefinition = "TEXT")
