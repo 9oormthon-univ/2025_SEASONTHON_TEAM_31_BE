@@ -2,6 +2,8 @@ package com.cloudtone31.global.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,6 +15,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 @RestControllerAdvice(basePackages = "com.cloudtone31")
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<?>> handleValidation(MethodArgumentNotValidException e) {
@@ -47,12 +51,9 @@ public class GlobalExceptionHandler {
 
     // ✅ 단 하나의 범용 핸들러만 유지
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleEtc(Exception e, HttpServletRequest req) throws Exception {
-        String uri = req.getRequestURI();
-        // springdoc/swagger 요청은 스프링 기본 처리에 맡겨야 /v3/api-docs 가 500이 안 남
-        if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
-            throw e; // <-- 반드시 throws Exception 선언 필요
-        }
+    public ResponseEntity<ApiResponse<?>> handleEtc(Exception e) {
+        // 필요하면 로그 추가
+        log.error("Unhandled server error:", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail("서버에서 오류가 발생했습니다."));
     }

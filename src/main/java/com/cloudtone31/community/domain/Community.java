@@ -2,13 +2,21 @@ package com.cloudtone31.community.domain;
 
 import com.cloudtone31.user.domain.User;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import java.time.LocalDateTime;
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 @Entity
 @Table(name = "community")
 public class Community {
@@ -27,11 +35,9 @@ public class Community {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
-
-    @Column(name = "like_count", nullable = false)
     private int likeCount;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", insertable = false, updatable = false)
