@@ -51,21 +51,19 @@ spring:
         format_sql: true
         show_sql: true
 
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
-
-  # 로컬은 세션을 톰캣(메모리)로 유지
+  # ✅ 로컬도 세션을 Redis에 저장
   session:
-    store-type: none
+    store-type: redis
     timeout: 90d
+    redis:
+      namespace: growme:sess           # 선택(키 프리픽스)
+      flush-mode: on_save               # 선택(기본값 유지해도 됨)
 
   data:
     redis:
       host: localhost
       port: 6379
+      # password: ""                    # 비번 없으면 생략
 
   security:
     oauth2:
@@ -94,7 +92,7 @@ server:
     session:
       timeout: 90d
       cookie:
-        secure: false
+        secure: false   # 로컬은 http
         max-age: 90d
 
 cors:
@@ -102,13 +100,8 @@ cors:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:dev-secret}
+    secret: Ew/RS4Xa3L+pTLia1DXzli/tinA+W5oue++V4fLCkksLSk48zgJC8ooHJGgcBFsM/aaxKOlehON0Jc0p8Shbyw==
     access-token-minutes: 60
-
-management:
-  health:
-    redis:
-      enabled: false
 
 # -----------------------------------------------------------------------------
 # dev (EC2)
