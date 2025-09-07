@@ -1,0 +1,40 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: growme-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"   # 외부 접속 필요 없으면 "127.0.0.1:3306:3306" 권장
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2
+    container_name: growme-redis
+    ports:
+      - "6379:6379"   # 외부 접속 불필요 시 "127.0.0.1:6379:6379" 권장
+    restart: unless-stopped
+
+  app:
+    image: docker.io/juheunshim/growme-be:dev-latest  # ← 고정 태그 사용
+    platform: linux/amd64   # 맥북(M1/M2/M3) arm64 호환을 위해 추가
+    container_name: growme-app
+    env_file: .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - JWT_SECRET=${JWT_SECRET}  # 필요 시 .env 에 JWT_SECRET 추가
+      - SECURITY_JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
